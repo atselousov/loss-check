@@ -1,0 +1,1 @@
+AVAILABLE_LOSSES = ['L1', 'L2', 'K']
