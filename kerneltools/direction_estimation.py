@@ -6,7 +6,7 @@ from .noise_estimation import get_sigma
 import math
 
 
-@jit('f4(f4[:,:])', cache=True)
+#@jit('f4(f4[:,:])', cache=True)
 def get_direction(image):
     image_size = image.shape
 

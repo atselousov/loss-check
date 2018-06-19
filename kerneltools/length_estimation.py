@@ -5,7 +5,7 @@ from numba import jit
 from tools.gauss_2d import gauss_2d
 
 
-@jit('UniTuple(i4, 2)(f4[:,:])', cache=True)
+#@jit('UniTuple(i4, 2)(f4[:,:])', cache=True)
 def get_length(image):
     distortion_angle = get_direction(image)
 

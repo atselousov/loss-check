@@ -3,7 +3,7 @@ from numba import jit
 import pyfftw
 
 
-@jit('f4(f4[:,:], f4)', cache=True)
+#@jit('f4(f4[:,:], f4)', cache=True)
 def get_sigma(image, radius_coefficient=0.1):
 
     image_size = image.shape

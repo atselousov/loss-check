@@ -5,7 +5,7 @@ import torch
 
 from config import *
 from convolve import conv
-from estimate_kernel.init_kernel import initialize_kernel
+from kerneltools.init_kernel import initialize_kernel, kernel_threshold
 from iom import read_image, write_image
 from loss import Loss
 from mutable_kernel import MutableKernel
@@ -41,6 +41,7 @@ def main():
     criteria = Loss(args.loss)
 
     kernel, kernel_size, kernel_angle = initialize_kernel(t2i(distorted_image))
+    kernel = kernel_threshold(kernel)
     print('ESTIMATED KERNEL PARAMETERS: size - {} | angle - {}'.format(kernel_size, kernel_angle))
 
     for cur_kernel in MutableKernel(kernel):    
