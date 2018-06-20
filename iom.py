@@ -6,8 +6,9 @@ import numpy as np
 def read_image(path, gray=False):
     image = io.imread(path, as_grey=gray).astype(np.float32)
 
-    # if not gray:
-    #     image = image / 255.
+    image = image / 255.
+
+    print(np.max(image), np.min(image))
 
     return image
 

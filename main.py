@@ -44,8 +44,9 @@ def main():
     kernel = kernel_threshold(kernel)
     print('ESTIMATED KERNEL PARAMETERS: size - {} | angle - {}'.format(kernel_size, kernel_angle))
 
-    for cur_kernel in MutableKernel(kernel):    
-        print('LOSS {}: {}'.format(criteria, criteria(distorted_image, conv(original_image, cur_kernel))))
+    for cur_kernel in MutableKernel(kernel):
+        if cur_kernel is not None: 
+            print('LOSS {}: {}'.format(criteria, criteria(distorted_image, conv(original_image, cur_kernel))))
 
 
 if __name__ == '__main__':

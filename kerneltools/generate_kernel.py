@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import skimage.transform as transform
 
@@ -18,14 +20,18 @@ def generate_kernel(x, y, result_size):
     x_ = 1000 * x
     y_ = 10 * y
 
-    fun = np.poly1d(np.polyfit(x_, y_, 2))
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            fun = np.poly1d(np.polyfit(x_, y_, 2))
+        except np.RankWarning:
+            return None
 
     x_ = np.arange(np.min(x_), np.max(x_), 0.01)
     
     # TODO: catch poorly conditioned examples
     y_ = fun(x_).astype(np.int32)
     y_[y_ < 0] = 0
-
     x_ = x_.astype(np.int32)
     x_[x_ < 0] = 0
 
