@@ -30,4 +30,4 @@ class MutableKernel(object):
         self.x[1] = x
         self.y[1] = y
         
-        return generate_kernel(self.x, self.y, self._kernel_size)
+        return x, y, generate_kernel(self.x, self.y, self._kernel_size)
