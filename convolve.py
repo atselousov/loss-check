@@ -6,8 +6,10 @@ import numpy as np
 
 def conv(image, kernel, t_tensor=False):
     # TODO: set num in / out chanels
-    kernel = np.expand_dims(kernel, axis=0)
-    kernel = np.expand_dims(kernel, axis=0)
+
+    if not isinstance(kernel, torch.Tensor):
+        kernel = np.expand_dims(kernel, axis=0)
+        kernel = np.expand_dims(kernel, axis=0)
 
     image = o2t(image)
     kernel = o2t(kernel)

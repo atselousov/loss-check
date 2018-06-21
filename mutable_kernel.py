@@ -5,7 +5,7 @@ from kerneltools.generate_kernel import generate_kernel
 
 class MutableKernel(object):
     def __init__(self, init_kernel):
-        self._init_kernel = init_kernel[:]
+        self._init_kernel = np.squeeze(init_kernel[:])
         self._kernel_size = self._init_kernel.shape[0]
 
         self._possible_number = np.product(self._init_kernel.shape)

@@ -26,7 +26,7 @@ def i2t(image):
 
 def t2i(tensor):
     if isinstance(tensor, torch.Tensor):
-        tensor = tensor.numpy()
+        tensor = tensor.detach().numpy()
 
     tensor = np.squeeze(tensor)
     

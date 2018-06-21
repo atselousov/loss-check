@@ -37,6 +37,9 @@ def get_args():
     parser.add_argument('--gray', action='store_true', default=False, 
                         help='If set, loss will be optimized with grayscale images.')
 
+    parser.add_argument('--grid_search', action='store_true', default=False, 
+                        help='Find distortion kernel using grid search instead gradient descent.')
+
     return parser.parse_args()
 
 
@@ -83,21 +86,48 @@ def main():
 
     dump['estimated_kernel'] = kernel
 
-    m_kernel = MutableKernel(kernel)
+    if args.grid_search:
+        m_kernel = MutableKernel(kernel)
 
-    losses = np.zeros((m_kernel._kernel_size, m_kernel._kernel_size))
-    kernels = np.zeros((m_kernel._kernel_size ** 2, m_kernel._kernel_size ** 2))
+        losses = np.inf * np.ones((m_kernel._kernel_size, m_kernel._kernel_size))
+        kernels = np.zeros((m_kernel._kernel_size ** 2, m_kernel._kernel_size ** 2))
 
-    for x, y, cur_kernel in m_kernel:
-        if cur_kernel is not None: 
-            loss_v = criteria(distorted_image, conv(original_image, cur_kernel))
-            print('LOSS {}: {}'.format(criteria, loss_v))
-            kernels[y * m_kernel._kernel_size:(y+1) * m_kernel._kernel_size, \
-                    x * m_kernel._kernel_size:(x+1) * m_kernel._kernel_size] = cur_kernel
-            losses[y, x] = loss_v
+        for x, y, cur_kernel in m_kernel:
+            if cur_kernel is not None: 
+                loss_v = criteria(conv(original_image, cur_kernel), distorted_image)
+                print('LOSS {}: {}'.format(criteria, loss_v))
+                kernels[y * m_kernel._kernel_size:(y+1) * m_kernel._kernel_size, \
+                        x * m_kernel._kernel_size:(x+1) * m_kernel._kernel_size] = cur_kernel
+                losses[y, x] = loss_v
 
-    dump['losses'] = losses
-    dump['kernels'] = kernels
+        yi, xi = np.where(losses == np.min(losses))
+        yi, xi = yi[0], xi[0]
+        print('Minimum value: {} | xi: {} | yi: {}'.format(losses[yi, xi], xi, yi))
+        dump['found_kernel'] = kernels[yi * m_kernel._kernel_size:(yi+1) * m_kernel._kernel_size, \
+                                       xi * m_kernel._kernel_size:(xi+1) * m_kernel._kernel_size]
+
+        dump['losses'] = losses
+        dump['kernels'] = kernels
+
+    else:
+        kernel = np.expand_dims(kernel, axis=0)
+        kernel = np.expand_dims(kernel, axis=0)
+        kernel = torch.tensor(kernel.astype(np.float32), requires_grad=True)
+
+        optimizer = torch.optim.Adam([kernel], 1)
+
+        for i in range(5000):
+            optimizer.zero_grad()
+            #kernel = kernel / torch.sum(kernel)
+            loss_v = criteria(conv(original_image, kernel, True), distorted_image, True) + 0.01 * torch.mean(kernel ** 2)
+            loss_v.backward()
+            optimizer.step()
+
+            print('I: {} | LOSS: {:.8f}'.format(i, loss_v))
+
+            # kernel = kernel / torch.sum(kernel)
+
+        dump['found_kernel'] = t2i(kernel)
 
     show_dump(dump)
 
