@@ -1,5 +1,5 @@
 import warnings
-
+from functools import wraps
 import numpy as np
 import skimage.transform as transform
 
@@ -13,19 +13,28 @@ def kernel_threshold(kernel, threshold=0.7):
     return kernel
 
 
-def generate_kernel(x, y, result_size):
-    assert len(x) == len(y) and len(x) == 3
+def catch_warning(fun):
+    @wraps(fun)
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter('error')
+            try:
+                return fun(*args, **kwargs)
+            except:
+                return None
+
+    return wrapper
+
+
+@catch_warning
+def generate_kernel(x, y, result_size, order=2):
+    assert len(x) == len(y) and len(x) == order + 1
     assert np.all(x >= 0) and np.all(y >= 0)
 
     x_ = 1000 * x
     y_ = 10 * y
 
-    with warnings.catch_warnings():
-        warnings.filterwarnings('error')
-        try:
-            fun = np.poly1d(np.polyfit(x_, y_, 2))
-        except np.RankWarning:
-            return None
+    fun = np.poly1d(np.polyfit(x_, y_, order))         
 
     x_ = np.arange(np.min(x_), np.max(x_), 0.01)
     

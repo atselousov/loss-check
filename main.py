@@ -42,7 +42,10 @@ def get_args():
     parser.add_argument('--grid_search', action='store_true', default=False, 
                         help='Find distortion kernel using grid search instead gradient descent.')
 
-    parser.add_argument('--lr_itr', type=int, default=10, help='Number of iterations for RL algorithm.')
+    parser.add_argument('--lr_itr', type=int, default=30, help='Number of iterations for RL algorithm.')
+
+    parser.add_argument('--use_init', action='store_true', default=False, 
+                        help='Use estimated kernel as initialization.')
 
     return parser.parse_args()
 
@@ -56,28 +59,19 @@ def show_dump(dump):
     plt.show()
 
 
-def grid_search(original_image, distorted_image, init_kernel, criteria, dump):
-    m_kernel = MutableKernel(init_kernel)
+def grid_search(original_image, distorted_image, m_kernel, criteria):
+    min_loss_v = np.inf
+    kernel, points = None, None
 
-    losses = np.inf * np.ones((m_kernel._kernel_size, m_kernel._kernel_size))
-    kernels = np.zeros((m_kernel._kernel_size ** 2, m_kernel._kernel_size ** 2))
-
-    for x, y, cur_kernel in m_kernel:
+    for cur_points, cur_kernel in m_kernel:
         if cur_kernel is not None: 
             loss_v = criteria(conv(original_image, cur_kernel), distorted_image)
-            print('LOSS {}: {}'.format(criteria, loss_v))
-            kernels[y * m_kernel._kernel_size:(y+1) * m_kernel._kernel_size, \
-                    x * m_kernel._kernel_size:(x+1) * m_kernel._kernel_size] = cur_kernel
-            losses[y, x] = loss_v
+            print('Points: {} | Loss {}: {}'.format(cur_points, criteria, loss_v))
 
-    yi, xi = np.where(losses == np.min(losses))
-    yi, xi = yi[0], xi[0]
-    print('Minimum value: {} | xi: {} | yi: {}'.format(losses[yi, xi], xi, yi))
-    dump['found_kernel'] = kernels[yi * m_kernel._kernel_size:(yi+1) * m_kernel._kernel_size, \
-                                    xi * m_kernel._kernel_size:(xi+1) * m_kernel._kernel_size]
+            if loss_v < min_loss_v:
+                min_loss_v, kernel, points = loss_v, cur_kernel, cur_points
 
-    dump['losses'] = losses
-    dump['kernels'] = kernels
+    return kernel, points
 
 
 def grad_desc(original_image, distorted_image, init_kernel, criteria, dump):
@@ -135,7 +129,13 @@ def main():
     dump['distorted_image'] = t2i(distorted_image)
 
     if args.grid_search:
-        grid_search(original_image, distorted_image, kernel, criteria, dump)
+        if args.use_init:
+            m_kernel = MutableKernel(kernel_size, kernel)
+        else:
+            m_kernel = MutableKernel(kernel_size, order=2)
+
+        found_kernel, _ = grid_search(original_image, distorted_image, m_kernel, criteria)
+        dump['found_kernel'] = found_kernel
 
     else:
         grad_desc(original_image, distorted_image, kernel, criteria, dump)
