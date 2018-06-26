@@ -1,5 +1,5 @@
 from skimage import io
-import scipy
+import scipy.io
 import numpy as np
 
 
@@ -21,7 +21,8 @@ def write_image(path, image):
 
 
 def dump_mat(path, dict):
-    scipy.io.savemat(path, dict)
+    if path is not None:
+        scipy.io.savemat(path, dict)
 
 
 if __name__ == '__main__':

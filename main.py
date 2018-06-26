@@ -6,7 +6,7 @@ import torch
 
 from config import *
 from convolve import conv
-from iom import read_image, write_image
+from iom import *
 from kerneltools.generate_kernel import generate_kernel
 from kerneltools.init_kernel import initialize_kernel, kernel_threshold
 from loss import Loss
@@ -44,24 +44,33 @@ def get_args():
 
     parser.add_argument('--lr_itr', type=int, default=30, help='Number of iterations for RL algorithm.')
 
-    parser.add_argument('--use_init', action='store_true', default=False, 
-                        help='Use estimated kernel as initialization.')
+    parser.add_argument('--init_with_grid', action='store_true', default=False, 
+                        help='Find estimation of kernel using grid search.')
+
+    parser.add_argument('--dump_path', type=str, default=None, 
+                        help='Save dump to this file.')
 
     return parser.parse_args()
 
 
 
-def show_dump(dump):
+def process_dump(dump_path, dump):
     for key, val in dump.items():
-        plt.figure()
-        plt.imshow(val, 'gray')
-        plt.title(key)
+        if isinstance(val, np.ndarray):
+            plt.figure()
+            plt.imshow(val, 'gray')
+            plt.title(key)
+
+    dump_mat(dump_path, dump)
+
     plt.show()
 
 
-def grid_search(original_image, distorted_image, m_kernel, criteria):
+def grid_search(original_image, distorted_image, m_kernel, criteria, save=False):
     min_loss_v = np.inf
     kernel, points = None, None
+
+    all_data = [] if save else None
 
     for cur_points, cur_kernel in m_kernel:
         if cur_kernel is not None: 
@@ -71,7 +80,10 @@ def grid_search(original_image, distorted_image, m_kernel, criteria):
             if loss_v < min_loss_v:
                 min_loss_v, kernel, points = loss_v, cur_kernel, cur_points
 
-    return kernel, points
+            if save:
+                all_data.append((cur_kernel, cur_points, loss_v))
+
+    return kernel, points, all_data
 
 
 def grad_desc(original_image, distorted_image, init_kernel, criteria, dump):
@@ -124,18 +136,23 @@ def main():
     kernel = kernel_threshold(kernel)
     print('ESTIMATED KERNEL PARAMETERS: size - {} | angle - {}'.format(kernel_size, kernel_angle))
 
+    if args.init_with_grid:
+        m_kernel = MutableKernel(kernel_size, order=1)
+        save = True if args.dump_path is not None else False
+        kernel, _ , _ = grid_search(original_image, distorted_image, m_kernel, criteria)
+
     dump['estimated_kernel'] = kernel
     dump['original_image'] = t2i(original_image)
     dump['distorted_image'] = t2i(distorted_image)
 
     if args.grid_search:
-        if args.use_init:
-            m_kernel = MutableKernel(kernel_size, kernel)
-        else:
-            m_kernel = MutableKernel(kernel_size, order=2)
-
-        found_kernel, _ = grid_search(original_image, distorted_image, m_kernel, criteria)
+        m_kernel = MutableKernel(kernel_size, kernel)
+        save = True if args.dump_path is not None else False
+        found_kernel, _, all_data = grid_search(original_image, distorted_image, m_kernel, criteria, 
+                                         save=save)
         dump['found_kernel'] = found_kernel
+        if save:
+            dump['all_data'] = all_data
 
     else:
         grad_desc(original_image, distorted_image, kernel, criteria, dump)
@@ -143,7 +160,7 @@ def main():
     dump['restored_image'] = restoration.richardson_lucy(t2i(distorted_image), 
                                                          dump['found_kernel'], args.lr_itr)
 
-    show_dump(dump)
+    process_dump(args.dump_path, dump)
 
 
 if __name__ == '__main__':
