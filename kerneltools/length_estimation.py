@@ -45,6 +45,7 @@ def get_length(image):
                                    np.abs(max_index % image_size[1] - w_center)
 
     lenght = np.sqrt(h_max_indexes ** 2 + w_max_indexes ** 2)
+    lenght += (1 - lenght % 2)
 
     return lenght, distortion_angle
 

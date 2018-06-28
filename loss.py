@@ -24,7 +24,6 @@ class Loss(object):
         return res_loss
 
     def __call__(self, im1, im2, t_tensor=False):
-        # TODO: probably sum of losses must be normalized 
         loss = 0
 
         im1 = o2t(im1)
@@ -32,6 +31,8 @@ class Loss(object):
 
         for l in self._loss:
             loss += l(im1, im2)
+
+        loss /= len(self._loss)
 
         if t_tensor:
             return loss

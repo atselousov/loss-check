@@ -1,5 +1,7 @@
 import argparse
 
+import matplotlib
+matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -21,8 +23,7 @@ def get_args():
 
     parser.add_argument('--original_image', type=str, required=True, 
                         help='Original image.')
-    parser.add_argument('--distorted_image', type=str, required=True, 
-                        help='Distorted image.')
+    parser.add_argument('--distorted_image', type=str, default=None, help='Distorted image.')
 
     parser.add_argument('--gen_distortion', action='store_true', default=False,
                         help='Generate distorted image with given kernel.')
@@ -53,13 +54,15 @@ def get_args():
     return parser.parse_args()
 
 
-
 def process_dump(dump_path, dump):
     for key, val in dump.items():
         if isinstance(val, np.ndarray):
-            plt.figure()
-            plt.imshow(val, 'gray')
-            plt.title(key)
+            try:
+                plt.figure()
+                plt.imshow(val, 'gray')
+                plt.title(key)
+            except:
+                break
 
     dump_mat(dump_path, dump)
 
@@ -111,7 +114,7 @@ def main():
     args = get_args()
 
     if not args.gray:
-        raise NotImplementedError('Work with color images is not implemented yet.')
+        raise NotImplementedError('Work with color images is not implemented yet. Use --gray flag.')
 
     dump = {}
 
@@ -119,6 +122,7 @@ def main():
 
     if args.gen_distortion:
         assert len(args.xp) == len(args.yp)
+        args.kernel_size += (1 - args.kernel_size % 2)
         generated_kernel = generate_kernel(np.array(args.xp), np.array(args.yp), args.kernel_size)
         if generated_kernel is None:
             print('Poor conditioned kernel.')
@@ -156,6 +160,10 @@ def main():
 
     else:
         grad_desc(original_image, distorted_image, kernel, criteria, dump)
+
+    if 'found_kernel' not in dump or dump['found_kernel'] is None:
+        print('Kernel is not found.')
+        exit()
 
     dump['restored_image'] = restoration.richardson_lucy(t2i(distorted_image), 
                                                          dump['found_kernel'], args.lr_itr)

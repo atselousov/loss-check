@@ -17,10 +17,10 @@ def catch_warning(fun):
     @wraps(fun)
     def wrapper(*args, **kwargs):
         with warnings.catch_warnings():
-            warnings.simplefilter('error')
+            warnings.simplefilter('error', np.RankWarning)
             try:
                 return fun(*args, **kwargs)
-            except:
+            except np.RankWarning:
                 return None
 
     return wrapper
