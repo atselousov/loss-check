@@ -1,6 +1,30 @@
-import torch
 import copy
+
+import torch
+import torch.nn as nn
+
+import torchvision
 from utils import o2t
+
+
+class PerceptualLossVgg11(nn.Module):
+    def __init__(self):
+        super(PerceptualLossVgg11, self).__init__()
+
+        self.vgg11_conv = torchvision.models.vgg11(pretrained=True).features[:-2]
+        self.peprocess = torchvision.transforms.Normalize([0.485, 0.456, 0.406],
+                                                          [0.229, 0.224, 0.225])
+
+        for param in self.vgg11_conv:
+            param.requires_grad = False
+
+    def forward(self, original, distorted):
+        ''' input images must have values in [0, 1] '''
+        if original.size(1) == 1 and distorted.size(1) == 1:
+            original = torch.cat(3 * [original], dim=1)
+            distorted = torch.cat(3 * [distorted], dim=1)
+
+        return torch.mean(torch.abs(self.vgg11_conv(original) - self.vgg11_conv(distorted)))
 
 
 class Loss(object):
@@ -16,8 +40,8 @@ class Loss(object):
         if 'L2' in losses:
             res_loss.append(torch.nn.MSELoss())
 
-        if 'K' in losses:
-            raise NotImplementedError('K loss function is not implemented')
+        if 'P' in losses:
+            res_loss.append(PerceptualLossVgg11())
 
         assert len(res_loss) != 0
 
